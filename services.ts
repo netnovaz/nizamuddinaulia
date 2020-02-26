@@ -1,62 +1,73 @@
-import { Injectable } from '@angular/core';
-import { Http, Response } from '@angular/http';
-import { Observable } from 'rxjs/Observable';
-import 'rxjs/add/operator/catch';
-import 'rxjs/add/operator/map';
+import { Component, OnInit } from '@angular/core';
+import { StaticpagesService} from './../api/staticpages.service';
 
-/*
-  Generated class for the InAppBrowserServiceProvider provider.
+import { LoadingController } from '@ionic/angular';
+import { Observable } from 'rxjs';
+import { finalize } from 'rxjs/operators';
+import { HttpClient } from '@angular/common/http';
 
-  See https://angular.io/guide/dependency-injection for more info on providers
-  and Angular DI.
-*/
-@Injectable()
-export class InAppBrowserServiceProvider {
+import { ActivatedRoute } from '@angular/router';
 
-  private apiUrl = 'http://netnovaz.com/nizamuddin-app/apis/articles.json';
-  private photoGallery = 'http://netnovaz.com/nizamuddin-app/apis/photo-gallery.json';
-  constructor(public http: Http) {
-    console.log('Hello InAppBrowserServiceProvider Provider');
+@Component({
+  selector: 'app-login',
+  templateUrl: './login.page.html',
+  styleUrls: ['./login.page.scss'],
+})
+export class LoginPage implements OnInit {
+  loading: any;
+  data: string;
+  error: string;
+  currentId: any;
+  pageTitle: string;
+
+  constructor(private http: HttpClient, public loadingController: LoadingController, private activatedRoute: ActivatedRoute) {
+    this.data = '';
+    this.error = '';
   }
 
-  public open(url: string): boolean {
-		window.open(url, '_system', 'location=yes');
-		return false;
+  ngOnInit() {
+    this.currentId = this.activatedRoute.snapshot.paramMap.get('currentid');
+    this.pageTitle = this.activatedRoute.snapshot.paramMap.get('pageTitle');
+
+    
   }
-  
-  getLatest() {  
-        let latestList = this.http.get('http://netnovaz.com/nizamuddin-app/apis/data.json');
-        return latestList;
-    }
-	
-  getArticles(): Observable<string[]> {
-    return this.http.get(this.apiUrl)
-                    .map(this.extractData)
-                    .catch(this.handleError);
+  async ionViewWillEnter() {
+    // Present a loading controller until the data is loaded
+    await this.presentLoading();
+    // Load the data
+    this.prepareDataRequest()
+        .pipe(
+            finalize(async () => {
+              // Hide the loading spinner on success or error
+              await this.loading.dismiss();
+            })
+        )
+        .subscribe(
+            data => {
+              // Set the data to display in the template
+              this.data = JSON.parse(JSON.stringify(data));
+            },
+            err => {
+              // Set the error information to display in the template
+              this.error = `An error occurred, the data could not be retrieved: Status: ${err.status}, Message: ${err.statusText}`;
+            }
+        );
   }
 
-  getPhotoGallery(): Observable<string[]> {
-    return this.http.get(this.photoGallery)
-                    .map(this.extractData)
-                    .catch(this.handleError);
+  async presentLoading() {
+    // Prepare a loading controller
+    this.loading = await this.loadingController.create({
+      message: 'Loading...'
+    });
+    // Present the loading controller
+    await this.loading.present();
   }
 
-  private extractData(res: Response) {
-    let body = res.json();
-    return body || { };
-  }
-
-  private handleError (error: Response | any) {
-    let errMsg: string;
-    if (error instanceof Response) {
-      const body = error.json() || '';
-      const err = body.error || JSON.stringify(body);
-      errMsg = `${error.status} - ${error.statusText || ''} ${err}`;
-    } else {
-      errMsg = error.message ? error.message : error.toString();
-    }
-    console.error(errMsg);
-    return Observable.throw(errMsg);
+  private prepareDataRequest(): Observable<object> {
+    // Define the data URL
+    const dataUrl = 'http://razajarrar.com/nizamuddin/articles.php';
+    // Prepare the request
+    return this.http.get(dataUrl);
   }
 
 }
